@@ -15,6 +15,10 @@ int main(int argc, char* argv[])
 {
   // create a socket using TCP IP
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  //file to send
+  std::ifstream filef(argv[3],std::ios::binary);
+  //int from args
+  int port = atoi(argv[2]);
 
   // struct sockaddr_in addr;
   // addr.sin_family = AF_INET;
@@ -28,8 +32,8 @@ int main(int argc, char* argv[])
 
   struct sockaddr_in serverAddr;
   serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(argv[1]);     // short, network byte order
-  serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  serverAddr.sin_port = htons(port);     // short, network byte order
+  serverAddr.sin_addr.s_addr = inet_addr(argv[1]);
   memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
   // connect to the server
@@ -53,35 +57,40 @@ int main(int argc, char* argv[])
 
   // send/receive data to/from connection
   bool isEnd = false;
-  std::string input;
-  char buf[20] = {0};
-  std::stringstream ss;
+  // std::string input;
+  char buf[1024] = {0};
+ // std::stringstream ss;
 
   while (!isEnd) {
     memset(buf, '\0', sizeof(buf));
-
-    std::cout << "send: ";
-    std::cin >> input;
-    if (send(sockfd, input.c_str(), input.size(), 0) == -1) {
+    filef.read(buf, sizeof(buf));
+    if (filef.gcount() == 0)
+    {
+      break;
+    }
+    // std::cout << "send: ";
+    // std::cin >> input;
+    
+    if (send(sockfd, buf, sizeof(buf), 0) == -1) {
       perror("send");
       return 4;
     }
 
 
-    if (recv(sockfd, buf, 20, 0) == -1) {
-      perror("recv");
-      return 5;
-    }
-    ss << buf << std::endl;
-    std::cout << "echo: ";
-    std::cout << buf << std::endl;
+    // if (recv(sockfd, buf, 20, 0) == -1) {
+    //   perror("recv");
+    //   return 5;
+    // }
+    // ss << buf << std::endl;
+    // std::cout << "echo: ";
+    // std::cout << buf << std::endl;
 
-    if (ss.str() == "close\n")
-      break;
+    // if (ss.str() == "close\n")
+    //   break;
 
-    ss.str("");
+    // ss.str("");
   }
-
+  filef.close();
   close(sockfd);
 
   return 0;

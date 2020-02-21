@@ -6,14 +6,23 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
  
 int main(int argc, char* argv[])
 {
   // create a socket using TCP IP
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  //int from args
+  int port = atoi(argv[1]);
+  // destination path
+  mkdir(argv[2], S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  std::string destination = argv[2];
+  destination += "/1.file";
+  std::ofstream filef(destination, std::ios::binary);
 
   // allow others to reuse the address
   int yes = 1;
@@ -25,7 +34,7 @@ int main(int argc, char* argv[])
   // bind address to socket
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(argv[0]);     // short, network byte order
+  addr.sin_port = htons(port);     // short, network byte order
   addr.sin_addr.s_addr = inet_addr("127.0.0.1");
   memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
 
@@ -57,31 +66,38 @@ int main(int argc, char* argv[])
 
   // read/write data from/into the connection
   bool isEnd = false;
-  char buf[20] = {0};
-  std::stringstream ss;
+  char buf[1024] = {0};
+  //std::stringstream ss;
 
   while (!isEnd) {
     memset(buf, '\0', sizeof(buf));
 
-    if (recv(clientSockfd, buf, 20, 0) == -1) {
+    int result = recv(clientSockfd, buf, sizeof(buf), 0);
+    if (result == 0) {
+      break;
+    }
+    if (result == -1) {
       perror("recv");
       return 5;
     }
 
-    ss << buf << std::endl;
-    std::cout << buf << std::endl;
+    filef.write(buf, sizeof(buf));
+    //filef << buf;
+//    ss << buf << std::endl;
+//    std::cout << buf << std::endl;
 
-    if (send(clientSockfd, buf, 20, 0) == -1) {
-      perror("send");
-      return 6;
-    }
+    // if (send(clientSockfd, buf, 20, 0) == -1) {
+    //   perror("send");
+    //   return 6;
+    // }
 
-    if (ss.str() == "close\n")
-      break;
+    // if (ss.str() == "close\n")
+    //   break;
 
-    ss.str("");
+    // ss.str("");
   }
 
+  filef.close();
   close(clientSockfd);
 
   return 0;
